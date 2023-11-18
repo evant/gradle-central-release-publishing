@@ -1,6 +1,8 @@
 package me.tatarka.gradle
 
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
+import dev.adamko.dokkatoo.DokkatooExtension
+import dev.adamko.dokkatoo.formats.DokkatooJavadocPlugin
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
 import me.tatarka.gradle.PublicationType.Android
@@ -27,8 +29,6 @@ import org.gradle.kotlin.dsl.withType
 import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
-import org.jetbrains.dokka.gradle.DokkaPlugin
-import org.jetbrains.dokka.gradle.DokkaTask
 
 const val PublishLocalForTest = "me.tatarka.gradle.publishLocalForTest"
 
@@ -89,7 +89,7 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
         project.plugins.apply(SigningPlugin::class)
 
         if (type == KotlinJvm || type == KotlinMultiplatform) {
-            project.plugins.apply(DokkaPlugin::class)
+            project.plugins.apply(DokkatooJavadocPlugin::class)
         }
 
         val signing = project.extensions.findByType<SigningExtension>()!!
@@ -111,12 +111,11 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                     project.extensions.configure<JavaPluginExtension> {
                         withSourcesJar()
                     }
-                    val dokkaJavadoc = project.tasks.findByName("dokkaJavadoc") as DokkaTask
+                    val dokkatoo = project.extensions.findByType<DokkatooExtension>()!!
                     val dokkaJar = project.tasks.register<Jar>("dokkaJar") {
                         archiveClassifier.set("javadoc")
-                        from(dokkaJavadoc.outputDirectory)
+                        from(dokkatoo.dokkatooPublications.named("javadoc").map { it.outputDir })
                     }
-
                     if (project.pluginManager.hasPlugin("java-gradle-plugin")) {
                         publications.maybeCreate<MavenPublication>("pluginMaven").apply {
                             artifact(dokkaJar)
@@ -132,13 +131,10 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                 }
 
                 KotlinMultiplatform -> {
-                    val dokkaCommon = project.tasks.register<DokkaTask>("dokkaCommon") {
-                        outputDirectory.set(project.layout.buildDirectory.dir("javadoc/common"))
-                        dokkaSourceSets.maybeCreate("commonMain")
-                    }
+                    val dokkatoo = project.extensions.findByType<DokkatooExtension>()!!
                     val dokkaCommonJar = project.tasks.register<Jar>("dokkaCommonJar") {
                         archiveClassifier.set("javadoc")
-                        from(dokkaCommon)
+                        from(dokkatoo.dokkatooPublications.named("javadoc").map { it.outputDir })
                     }
 
                     publications.all {

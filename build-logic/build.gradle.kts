@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    if (file("../build/bootstrap").exists()) {
+    if (!project.hasProperty("stage0")) {
         implementation(libs.self)
     }
 }

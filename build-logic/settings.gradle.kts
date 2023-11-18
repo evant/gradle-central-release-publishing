@@ -10,6 +10,7 @@ dependencyResolutionManagement {
             name = "bootstrap"
             url = uri("../build/bootstrap")
         }
+        mavenLocal()
         mavenCentral()
         gradlePluginPortal()
     }

@@ -1,6 +1,9 @@
 pluginManagement {
     repositories {
-        maven { url = uri(rootProject.buildFile.resolve("bootstrap"))}
+        maven {
+            name = "bootstrap"
+            url = uri(rootProject.projectDir.resolve("build/bootstrap"))
+        }
         mavenLocal()
         mavenCentral()
         gradlePluginPortal()
@@ -15,5 +18,5 @@ dependencyResolutionManagement {
     }
     rulesMode.set(RulesMode.FAIL_ON_PROJECT_RULES)
 }
-
+includeBuild("build-logic")
 rootProject.name = "central-release-publishing"

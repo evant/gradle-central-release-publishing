@@ -1,7 +1,6 @@
 plugins {
     `java-gradle-plugin`
     `kotlin-dsl`
-    kotlin("jvm") version embeddedKotlinVersion
     id("me.tatarka.gradle.bootstrap")
 }
 
@@ -10,7 +9,7 @@ version = libs.versions.version.get()
 
 dependencies {
     implementation(libs.nexus.publish)
-    implementation(libs.dokka)
+    implementation(libs.dokkatoo)
     compileOnly(libs.android)
 
     testImplementation(libs.junit5.api)
@@ -19,12 +18,8 @@ dependencies {
     testImplementation(libs.assertk)
 }
 
-centralReleasePublishing {
-    snapshot = true
-    pom {
-        description = "An opinionated gradle plugin to manage publishing to maven central"
-        github("evant", "gradle-central-release-publishing", "Eva Tatarka")
-    }
+if (!project.hasProperty("stage0")) {
+    apply(from = "publish.gradle")
 }
 
 val bootstrap = tasks.register("bootstrap") {
