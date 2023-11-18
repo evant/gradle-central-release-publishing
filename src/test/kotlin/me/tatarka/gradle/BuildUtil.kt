@@ -8,14 +8,17 @@ import org.gradle.testkit.runner.GradleRunner
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.absolutePathString
+import kotlin.io.path.bufferedReader
 import kotlin.io.path.createDirectories
 import kotlin.io.path.notExists
 import kotlin.io.path.writeText
 
-fun run(projectDir: Path, task: String): String {
+private val VersionMatch = Regex("^\\s*version\\s*=\\s*\"([^\"]+)\"\\s*$")
+
+fun run(projectDir: Path, task: String, vararg args: String): String {
     val result = GradleRunner.create()
         .withProjectDir(projectDir.toFile())
-        .withArguments(task)
+        .withArguments(task, *args)
         .build()
 
     return result.output
@@ -26,11 +29,19 @@ fun assemble(projectDir: Path): String {
 }
 
 fun publish(projectDir: Path): String {
-    return run(projectDir, "publish")
+    return run(projectDir, "publishAllPublicationsToLocalRepository")
 }
 
 fun createSettings(projectDir: Path, name: String, contents: () -> String = { "" }) {
-    val pluginRepo = Paths.get(".").resolve("build/repo").absolutePathString()
+    val pluginRepo = Paths.get(".").resolve("build/bootstrap").absolutePathString()
+    val version = Paths.get(".").resolve("gradle/libs.versions.toml")
+        .bufferedReader()
+        .lineSequence()
+        .mapNotNull { line ->
+           VersionMatch.matchEntire(line)?.let { it.groups[1]?.value }
+        }
+        .first()
+
     projectDir.resolve("settings.gradle.kts").apply {
         writeText(
             """
@@ -47,7 +58,7 @@ fun createSettings(projectDir: Path, name: String, contents: () -> String = { ""
                 resolutionStrategy {
                     eachPlugin {
                         if (target.id.id == "me.tatarka.gradle.central-release-publishing") {
-                            useModule("me.tatarka.gradle:central-release-publishing:0.1.0")
+                            useModule("me.tatarka.gradle:central-release-publishing:${version}")
                         }
                     }
                 }
@@ -65,10 +76,28 @@ fun createSettings(projectDir: Path, name: String, contents: () -> String = { ""
     }
 }
 
-fun createBuild(projectDir: Path, contents: () -> String) {
+fun publishDir(projectDir: Path): Path = projectDir.resolve("build/local")
+
+fun createBuild(projectDir: Path, publish: Boolean = true, contents: () -> String) {
     projectDir.resolve("build.gradle.kts").apply {
         parent.createDirectories()
-        writeText(contents())
+        if (publish) {
+            writeText(
+                """
+                ${contents()}
+                publishing {
+                    repositories {
+                        maven {
+                            name = "local"
+                            url = uri(rootProject.layout.buildDirectory.dir("local"))
+                        }
+                    }
+                }
+                """.trimIndent()
+            )
+        } else {
+            writeText(contents())
+        }
     }
 }
 
@@ -80,33 +109,6 @@ fun createKotlinSource(projectDir: Path, packageName: String, fileName: String, 
             parent.createDirectories()
             writeText(contents())
         }
-}
-
-fun testPublishRootFix(): String {
-    return """
-    // disable trying to initialize sonatype
-    tasks.named("initializeSonatypeStagingRepository") {
-        enabled = false 
-    }
-    """.trimIndent()
-}
-
-fun testPublish(to: String): String {
-    return """
-    // add local publish path
-    publishing {
-        repositories {
-            maven { 
-                name = "local"
-                url = uri(rootProject.layout.buildDirectory.dir("$to")) 
-            }
-        }
-    }
-    // disable tyring to publish to sonatype
-    tasks.withType<PublishToMavenRepository> {
-        onlyIf { repository.name == "local" }
-    }
-    """.trimIndent()
 }
 
 fun Assert<Path>.containsAllArtifacts(

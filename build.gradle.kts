@@ -1,12 +1,11 @@
 plugins {
     `java-gradle-plugin`
     `kotlin-dsl`
-    `maven-publish`
-    signing
     kotlin("jvm") version embeddedKotlinVersion
+    id("me.tatarka.gradle.bootstrap")
 }
 
-group = "me.tatarka.gradle"
+group = libs.self.get().group
 version = libs.versions.version.get()
 
 dependencies {
@@ -20,7 +19,20 @@ dependencies {
     testImplementation(libs.assertk)
 }
 
+centralReleasePublishing {
+    snapshot = true
+    pom {
+        description = "An opinionated gradle plugin to manage publishing to maven central"
+        github("evant", "gradle-central-release-publishing", "Eva Tatarka")
+    }
+}
+
+val bootstrap = tasks.register("bootstrap") {
+    dependsOn("publishAllPublicationsToBootstrapRepository")
+}
+
 tasks.test {
+    dependsOn(bootstrap)
     useJUnitPlatform()
 }
 
@@ -31,25 +43,4 @@ gradlePlugin {
             implementationClass = "me.tatarka.gradle.CentralReleasePublishingPlugin"
         }
     }
-}
-
-publishing {
-    publications {
-        create<MavenPublication>("publish") {
-            groupId = "me.tatarka.gradle"
-            artifactId = "central-release-publishing"
-            from(components["java"])
-        }
-    }
-
-    repositories {
-        maven {
-            name = "plugin"
-            url = uri(layout.buildDirectory.dir("repo"))
-        }
-    }
-}
-
-tasks.test.configure {
-    dependsOn("publish")
 }

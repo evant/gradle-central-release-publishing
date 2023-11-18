@@ -34,9 +34,6 @@ class CentralReleasePublishingPluginKotlinJvmTest {
                     }
                 }
             }
-            
-            ${testPublishRootFix()}
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
@@ -53,7 +50,7 @@ class CentralReleasePublishingPluginKotlinJvmTest {
         assemble(projectDir)
         publish(projectDir)
 
-        val publishDir = projectDir.resolve("build/repo")
+        val publishDir = publishDir(projectDir)
 
         assertThat(publishDir).containsAllArtifacts("com.example", "my-project", "1.0.0")
     }
@@ -67,7 +64,7 @@ class CentralReleasePublishingPluginKotlinJvmTest {
             """.trimIndent()
         }
 
-        createBuild(projectDir) {
+        createBuild(projectDir, publish = false) {
             """
             plugins {
                 id("me.tatarka.gradle.central-release-publishing")
@@ -85,8 +82,6 @@ class CentralReleasePublishingPluginKotlinJvmTest {
                     }
                 }
             }
-            
-            ${testPublishRootFix()}
             """.trimIndent()
         }
 
@@ -99,8 +94,6 @@ class CentralReleasePublishingPluginKotlinJvmTest {
                 kotlin("jvm") version "1.9.10"
                 id("me.tatarka.gradle.central-release-publishing")
             }
-            
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
@@ -110,15 +103,13 @@ class CentralReleasePublishingPluginKotlinJvmTest {
                 kotlin("jvm") version "1.9.10"
                 id("me.tatarka.gradle.central-release-publishing")
             }
-            
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
         assemble(projectDir)
         publish(projectDir)
 
-        val publishDir = projectDir.resolve("build/repo")
+        val publishDir = publishDir(projectDir)
 
         assertThat(publishDir).containsAllArtifacts("com.example", "project-1", "1.0.0")
         assertThat(publishDir).containsAllArtifacts("com.example", "project-2", "1.0.0")

@@ -1,12 +1,15 @@
 package me.tatarka.gradle
 
 import org.gradle.api.Action
+import org.gradle.api.provider.Property
 import org.gradle.api.publish.maven.MavenPom
 import org.gradle.api.publish.maven.MavenPomLicenseSpec
 
 abstract class CentralReleasePublishingExtension {
 
     private val pomActions = mutableListOf<Action<MavenPomConfiguration>>()
+
+    abstract val snapshot: Property<Boolean>
 
     fun pom(action: Action<MavenPomConfiguration>) {
         pomActions.add(action)

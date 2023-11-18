@@ -14,45 +14,53 @@ import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPom
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
+import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.get
+import org.gradle.kotlin.dsl.maybeCreate
 import org.gradle.kotlin.dsl.register
+import org.gradle.kotlin.dsl.withType
+import org.gradle.plugins.signing.Sign
 import org.gradle.plugins.signing.SigningExtension
 import org.gradle.plugins.signing.SigningPlugin
 import org.jetbrains.dokka.gradle.DokkaPlugin
 import org.jetbrains.dokka.gradle.DokkaTask
 
+const val PublishLocalForTest = "me.tatarka.gradle.publishLocalForTest"
+
 class CentralReleasePublishingPlugin : Plugin<Project> {
     override fun apply(project: Project) {
+
+        val publishLocalForTest = project.findProperty(PublishLocalForTest) == "true"
 
         val extension = project.extensions
             .create<CentralReleasePublishingExtension>("centralReleasePublishing")
 
         if (project == project.rootProject) {
-            rootProject(project)
+            rootProject(project, publishLocalForTest)
         } else {
             project.version = project.rootProject.version
             project.group = project.rootProject.group
         }
 
         project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
-            setupPublishing(project, extension, KotlinMultiplatform)
+            setupPublishing(project, extension, publishLocalForTest, KotlinMultiplatform)
         }
 
         project.plugins.withId("org.jetbrains.kotlin.jvm") {
-            setupPublishing(project, extension, KotlinJvm)
+            setupPublishing(project, extension, publishLocalForTest, KotlinJvm)
         }
 
         project.plugins.withId("com.android.library") {
-            setupPublishing(project, extension, Android)
+            setupPublishing(project, extension, publishLocalForTest, Android)
         }
     }
 
-    private fun rootProject(project: Project) {
+    private fun rootProject(project: Project, publishLocalForTest: Boolean) {
         project.afterEvaluate {
             if (project.version == Project.DEFAULT_VERSION) {
                 throw InvalidUserDataException("project.version must be set in the project's root build.gradle file")
@@ -61,15 +69,22 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                 throw InvalidUserDataException("project.group must be set in the project's root build.gradle file")
             }
         }
-        project.plugins.apply(NexusPublishPlugin::class)
-        project.extensions.configure<NexusPublishExtension> {
-            repositories {
-                sonatype()
+        if (!publishLocalForTest) {
+            project.plugins.apply(NexusPublishPlugin::class)
+            project.extensions.configure<NexusPublishExtension> {
+                repositories {
+                    sonatype()
+                }
             }
         }
     }
 
-    private fun setupPublishing(project: Project, extension: CentralReleasePublishingExtension, type: PublicationType) {
+    private fun setupPublishing(
+        project: Project,
+        extension: CentralReleasePublishingExtension,
+        publishLocalForTest: Boolean,
+        type: PublicationType
+    ) {
         project.plugins.apply(MavenPublishPlugin::class)
         project.plugins.apply(SigningPlugin::class)
 
@@ -81,6 +96,16 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
         signing.isRequired = project.findProperty("signing.keyId") != null
 
         project.extensions.configure<PublishingExtension> {
+
+            if (publishLocalForTest) {
+                repositories {
+                    maven {
+                        name = "local"
+                        url = project.uri(project.rootProject.layout.buildDirectory.dir("repo"))
+                    }
+                }
+            }
+
             when (type) {
                 KotlinJvm -> {
                     project.extensions.configure<JavaPluginExtension> {
@@ -91,10 +116,18 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                         archiveClassifier.set("javadoc")
                         from(dokkaJavadoc.outputDirectory)
                     }
-                    publications.create<MavenPublication>("lib") {
-                        from(project.components["java"])
-                        artifact(dokkaJar)
-                        applyAndValidatePom(project, extension, pom)
+
+                    if (project.pluginManager.hasPlugin("java-gradle-plugin")) {
+                        publications.maybeCreate<MavenPublication>("pluginMaven").apply {
+                            artifact(dokkaJar)
+                            applyAndValidatePom(project, extension, pom)
+                        }
+                    } else {
+                        publications.create<MavenPublication>("lib") {
+                            from(project.components["java"])
+                            artifact(dokkaJar)
+                            applyAndValidatePom(project, extension, pom)
+                        }
                     }
                 }
 
@@ -136,6 +169,11 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                 }
             }
             publications.all { signing.sign(this) }
+
+            // TODO: remove after https://youtrack.jetbrains.com/issue/KT-46466 is fixed
+            project.tasks.withType<AbstractPublishToMaven>().configureEach {
+                dependsOn(project.tasks.withType<Sign>())
+            }
         }
     }
 
@@ -144,7 +182,12 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
             val rootExtension = project.rootProject.extensions.findByType<CentralReleasePublishingExtension>()
             rootExtension?.apply(project.name, pom)
             extension.apply(project.name, pom)
-            validatePom(pom)
+
+            tasks.named("publish").configure {
+                doFirst {
+                    validatePom(pom)
+                }
+            }
         }
     }
 

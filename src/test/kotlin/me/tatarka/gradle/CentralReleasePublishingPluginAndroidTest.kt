@@ -51,9 +51,6 @@ class CentralReleasePublishingPluginAndroidTest {
                     }
                 }
             }
-            
-            ${testPublishRootFix()}
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
@@ -72,7 +69,7 @@ class CentralReleasePublishingPluginAndroidTest {
         assemble(projectDir)
         publish(projectDir)
 
-        val publishDir = projectDir.resolve("build/repo")
+        val publishDir = publishDir(projectDir)
 
         assertThat(publishDir).containsAllArtifacts("com.example", "my-project", "1.0.0", packaging = "aar")
     }
@@ -86,7 +83,7 @@ class CentralReleasePublishingPluginAndroidTest {
             """.trimIndent()
         }
 
-        createBuild(projectDir) {
+        createBuild(projectDir, publish = false) {
             """
             plugins {
                 id("me.tatarka.gradle.central-release-publishing")
@@ -106,8 +103,6 @@ class CentralReleasePublishingPluginAndroidTest {
                     }
                 }
             }
-            
-            ${testPublishRootFix()}
             """.trimIndent()
         }
 
@@ -126,8 +121,6 @@ class CentralReleasePublishingPluginAndroidTest {
                 namespace = "com.example.project1"
                 compileSdk = 34
             }
-            
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
@@ -143,8 +136,6 @@ class CentralReleasePublishingPluginAndroidTest {
                 namespace = "com.example.project2"
                 compileSdk = 34
             }
-            
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
@@ -153,7 +144,7 @@ class CentralReleasePublishingPluginAndroidTest {
         assemble(projectDir)
         publish(projectDir)
 
-        val publishDir = projectDir.resolve("build/repo")
+        val publishDir = publishDir(projectDir)
 
         assertThat(publishDir).containsAllArtifacts("com.example", "project-1", "1.0.0", packaging = "aar")
         assertThat(publishDir).containsAllArtifacts("com.example", "project-2", "1.0.0", packaging = "aar")

@@ -1,5 +1,7 @@
 pluginManagement {
     repositories {
+        maven { url = uri(rootProject.buildFile.resolve("bootstrap"))}
+        mavenLocal()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -14,4 +16,4 @@ dependencyResolutionManagement {
     rulesMode.set(RulesMode.FAIL_ON_PROJECT_RULES)
 }
 
-rootProject.name = "gradle-central-release-publishing"
+rootProject.name = "central-release-publishing"

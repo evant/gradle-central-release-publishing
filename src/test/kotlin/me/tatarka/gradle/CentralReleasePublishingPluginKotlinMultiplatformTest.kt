@@ -39,16 +39,13 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
                     }
                 }
             }
-            
-            ${testPublishRootFix()}
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
         assemble(projectDir)
         publish(projectDir)
 
-        val publishDir = projectDir.resolve("build/repo")
+        val publishDir = publishDir(projectDir)
 
         assertThat(publishDir).containsAllArtifacts("com.example", "my-project", "1.0.0")
         assertThat(publishDir).containsAllArtifacts("com.example", "my-project-js", "1.0.0", packaging = "klib")
@@ -64,7 +61,7 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
             """.trimIndent()
         }
 
-        createBuild(projectDir) {
+        createBuild(projectDir, publish = false) {
             """
             plugins {
                 id("me.tatarka.gradle.central-release-publishing")
@@ -82,8 +79,6 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
                     }
                 }
             }
-            
-            ${testPublishRootFix()}
             """.trimIndent()
         }
 
@@ -101,8 +96,6 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
                 js { nodejs() }
                 jvm()
             }
-            
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
@@ -117,15 +110,13 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
                 js { nodejs() }
                 jvm()
             }
-            
-            ${testPublish("repo")}
             """.trimIndent()
         }
 
         assemble(projectDir)
         publish(projectDir)
 
-        val publishDir = projectDir.resolve("build/repo")
+        val publishDir = publishDir(projectDir)
 
         assertThat(publishDir).containsAllArtifacts("com.example", "project-1", "1.0.0")
         assertThat(publishDir).containsAllArtifacts("com.example", "project-1-js", "1.0.0", packaging = "klib")
