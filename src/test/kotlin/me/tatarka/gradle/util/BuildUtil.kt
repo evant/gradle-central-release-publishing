@@ -1,4 +1,4 @@
-package me.tatarka.gradle
+package me.tatarka.gradle.util
 
 import assertk.Assert
 import assertk.all
@@ -38,7 +38,7 @@ fun createSettings(projectDir: Path, name: String, contents: () -> String = { ""
         .bufferedReader()
         .lineSequence()
         .mapNotNull { line ->
-           VersionMatch.matchEntire(line)?.let { it.groups[1]?.value }
+            VersionMatch.matchEntire(line)?.let { it.groups[1]?.value }
         }
         .first()
 
@@ -127,7 +127,13 @@ fun Assert<Path>.containsAllArtifacts(
 
     all {
         val artifactName = "$artifactId-$version"
-        for (suffix in arrayOf(".pom", ".$packaging", "-javadoc.jar", "-sources.jar")) {
+        val suffixes = if (packaging == "pom") {
+            // don't need javadoc & sources
+            arrayOf(".pom")
+        } else {
+            arrayOf(".pom", ".$packaging", "-javadoc.jar", "-sources.jar")
+        }
+        for (suffix in suffixes) {
             val artifact = artifactPath.resolve(artifactName + suffix)
             if (artifact.notExists()) {
                 expected("${show(artifact)} to exist")

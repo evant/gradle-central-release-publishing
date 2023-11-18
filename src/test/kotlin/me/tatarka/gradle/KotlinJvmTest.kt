@@ -1,12 +1,19 @@
 package me.tatarka.gradle
 
 import assertk.assertThat
+import me.tatarka.gradle.util.assemble
+import me.tatarka.gradle.util.containsAllArtifacts
+import me.tatarka.gradle.util.createBuild
+import me.tatarka.gradle.util.createKotlinSource
+import me.tatarka.gradle.util.createSettings
+import me.tatarka.gradle.util.publish
+import me.tatarka.gradle.util.publishDir
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.CleanupMode
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
-class CentralReleasePublishingPluginKotlinMultiplatformTest {
+class KotlinJvmTest {
 
     @TempDir(cleanup = CleanupMode.ON_SUCCESS)
     lateinit var projectDir: Path
@@ -18,17 +25,12 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
         createBuild(projectDir) {
             """
             plugins {
-                kotlin("multiplatform") version "1.9.10"
+                kotlin("jvm") version "1.9.10"
                 id("me.tatarka.gradle.central-release-publishing")
             }
             
             group = "com.example"
             version = "1.0.0"
-            
-            kotlin {
-                js { nodejs() }
-                jvm()
-            }
             
             centralReleasePublishing {
                 pom {
@@ -42,14 +44,22 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
             """.trimIndent()
         }
 
+        createKotlinSource(projectDir, "com.example", "Lib") {
+            """
+            /**
+            My Lib function
+            */
+            fun myLibFun() {
+            }
+            """.trimIndent()
+        }
+
         assemble(projectDir)
         publish(projectDir)
 
         val publishDir = publishDir(projectDir)
 
         assertThat(publishDir).containsAllArtifacts("com.example", "my-project", "1.0.0")
-        assertThat(publishDir).containsAllArtifacts("com.example", "my-project-js", "1.0.0", packaging = "klib")
-        assertThat(publishDir).containsAllArtifacts("com.example", "my-project-jvm", "1.0.0")
     }
 
     @Test
@@ -88,13 +98,8 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
         createBuild(project1Dir) {
             """
             plugins {
-                kotlin("multiplatform") version "1.9.10"
+                kotlin("jvm") version "1.9.10"
                 id("me.tatarka.gradle.central-release-publishing")
-            }
-            
-            kotlin {
-                js { nodejs() }
-                jvm()
             }
             """.trimIndent()
         }
@@ -102,13 +107,8 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
         createBuild(project2Dir) {
             """
             plugins {
-                kotlin("multiplatform") version "1.9.10"
+                kotlin("jvm") version "1.9.10"
                 id("me.tatarka.gradle.central-release-publishing")
-            }
-            
-            kotlin {
-                js { nodejs() }
-                jvm()
             }
             """.trimIndent()
         }
@@ -119,11 +119,6 @@ class CentralReleasePublishingPluginKotlinMultiplatformTest {
         val publishDir = publishDir(projectDir)
 
         assertThat(publishDir).containsAllArtifacts("com.example", "project-1", "1.0.0")
-        assertThat(publishDir).containsAllArtifacts("com.example", "project-1-js", "1.0.0", packaging = "klib")
-        assertThat(publishDir).containsAllArtifacts("com.example", "project-1-jvm", "1.0.0")
-
         assertThat(publishDir).containsAllArtifacts("com.example", "project-2", "1.0.0")
-        assertThat(publishDir).containsAllArtifacts("com.example", "project-2-js", "1.0.0", packaging = "klib")
-        assertThat(publishDir).containsAllArtifacts("com.example", "project-2-jvm", "1.0.0")
     }
 }
