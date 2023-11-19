@@ -142,8 +142,10 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                     }
 
                     project.components.configureEach {
-                        publications.create<MavenPublication>(name) {
-                            from(this@configureEach)
+                        if (name == "release") {
+                            publications.create<MavenPublication>(name) {
+                                from(this@configureEach)
+                            }
                         }
                     }
                 }

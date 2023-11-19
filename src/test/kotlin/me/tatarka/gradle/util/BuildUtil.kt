@@ -19,6 +19,7 @@ fun run(projectDir: Path, task: String, vararg args: String): String {
     val result = GradleRunner.create()
         .withProjectDir(projectDir.toFile())
         .withArguments(task, *args)
+        .forwardOutput()
         .build()
 
     return result.output
