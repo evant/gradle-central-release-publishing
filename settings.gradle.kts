@@ -4,7 +4,6 @@ pluginManagement {
             name = "bootstrap"
             url = uri(rootProject.projectDir.resolve("build/bootstrap"))
         }
-        mavenLocal()
         mavenCentral()
         gradlePluginPortal()
     }
