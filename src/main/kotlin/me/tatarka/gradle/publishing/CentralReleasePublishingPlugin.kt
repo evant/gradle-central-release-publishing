@@ -44,11 +44,12 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
         val rootExtension = project.rootProject.extensions.findByType<CentralReleasePublishingExtension>()
         // defaults start with root defaults
         if (rootExtension != null && rootExtension !== extension) {
+            extension.snapshot.convention(rootExtension.snapshot)
             mergePomDefaults(extension.defaults.pom, rootExtension.defaults.pom, project.name)
         }
 
         if (project == project.rootProject) {
-            rootProject(project)
+            rootProject(project, extension.snapshot)
         } else {
             // default group and version to root values for convenience
             project.group = project.rootProject.group
@@ -70,12 +71,18 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
         }
     }
 
-    private fun rootProject(project: Project) {
+    private fun rootProject(project: Project, snapshot: Property<Boolean>) {
         project.plugins.apply(NexusPublishPlugin::class)
         project.extensions.configure<NexusPublishExtension> {
             repositories {
                 sonatype()
             }
+            useStaging.set(snapshot.map { !it })
+            val baseVersion = project.version
+            val module = project.run { "$group:$name" }
+            repositoryDescription.set(snapshot.map { snapshot ->
+                "$module:$baseVersion${if (snapshot) "-SNAPSHOT" else ""}"
+            })
         }
     }
 
