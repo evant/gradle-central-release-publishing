@@ -29,27 +29,50 @@ import javax.inject.Inject
 
 abstract class CentralReleasePublishingExtension {
 
+    /**
+     * If true, appends '-SNAPSHOT' to the version name and publishes to the sonatype snapshot repository.
+     */
     abstract val snapshot: Property<Boolean>
 
+    /**
+     * Configure default values, if done in the root project these will be picked up by subprojects.
+     */
     @get:Nested
     abstract val defaults: PublicationDefaults
 
+    /**
+     * Configure default values, if done in the root project these will be picked up by subprojects.
+     */
     fun defaults(action: Action<PublicationDefaults>) {
         action.execute(defaults)
     }
 
+    /**
+     * Configure publications, this will be populated with each maven publication that will be published in the current
+     * project.
+     */
     lateinit var publications: NamedDomainObjectSet<MavenPublication>
         internal set
 
+    /**
+     * Configure publications, this will be populated with each maven publication that will be published in the current
+     * project.
+     */
     fun publications(action: Action<MavenPublication>) {
         publications.configureEach(action)
     }
 }
 
 abstract class PublicationDefaults {
+    /**
+     * Configure default pom values, if done in the root project these will be picked up by subprojects.
+     */
     @get:Nested
     abstract val pom: MavenPomDefaults
 
+    /**
+     * Configure default pom values, if done in the root project these will be picked up by subprojects.
+     */
     fun pom(action: Action<MavenPomDefaults>) {
         action.execute(pom)
     }
