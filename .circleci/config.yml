@@ -20,7 +20,7 @@ jobs:
                 name: Bootstrap
                 command: ./gradlew bootstrap
       - gradle/test:
-          - test_command: check
+          test_command: check
       - deploy:
           command: |
             if [ "${CIRCLE_BRANCH}" == "main" ]; then
