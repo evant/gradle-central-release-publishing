@@ -19,15 +19,17 @@ jobs:
             - run:
                 name: Bootstrap
                 command: ./gradlew bootstrap
-      - gradle/test:
-          test_command: check
-      - deploy:
-          command: |
-            if [ "${CIRCLE_BRANCH}" == "main" ]; then
-              echo "$MAVEN_CENTRAL_SEC_RING" | base64 -d > $HOME/secring.gpg
-              gpg --import --batch $HOME/secring.gpg
-              ./gradlew publish -PsonatypeUsername="$SONATYPE_USERNAME" -PsonatypePassword="$SONATYPE_PASSWORD" -Psigning.keyId=34BCD878 -Psigning.password="$MAVEN_CENTRAL_KEY_PASSPHRASE" -Psigning.secretKeyRingFile=$HOME/secring.gpg -Porg.gradle.parallel=false
-            fi
+            - run:
+                name: Check
+                command: ./gradlew check
+            - deploy:
+                command: |
+                  if [ "${CIRCLE_BRANCH}" == "main" ]; then
+                    echo "$MAVEN_CENTRAL_SEC_RING" | base64 -d > $HOME/secring.gpg
+                    gpg --import --batch $HOME/secring.gpg
+                    ./gradlew publish -PsonatypeUsername="$SONATYPE_USERNAME" -PsonatypePassword="$SONATYPE_PASSWORD" -Psigning.keyId=34BCD878 -Psigning.password="$MAVEN_CENTRAL_KEY_PASSPHRASE" -Psigning.secretKeyRingFile=$HOME/secring.gpg -Porg.gradle.parallel=false
+                  fi
+      - gradle/collect_test_results
 workflows:
   version: 2
   build:
