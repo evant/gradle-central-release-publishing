@@ -1,22 +1,24 @@
-package me.tatarka.gradle
+package me.tatarka.gradle.publishing
 
 import com.android.build.api.variant.LibraryAndroidComponentsExtension
 import dev.adamko.dokkatoo.DokkatooExtension
-import dev.adamko.dokkatoo.formats.DokkatooJavadocPlugin
+import dev.adamko.dokkatoo.formats.DokkatooHtmlPlugin
 import io.github.gradlenexus.publishplugin.NexusPublishExtension
 import io.github.gradlenexus.publishplugin.NexusPublishPlugin
-import me.tatarka.gradle.PublicationType.Android
-import me.tatarka.gradle.PublicationType.KotlinJvm
-import me.tatarka.gradle.PublicationType.KotlinMultiplatform
-import org.gradle.api.InvalidUserDataException
+import me.tatarka.gradle.publishing.PublicationType.Android
+import me.tatarka.gradle.publishing.PublicationType.KotlinJvm
+import me.tatarka.gradle.publishing.PublicationType.KotlinMultiplatform
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.plugins.JavaPluginExtension
+import org.gradle.api.provider.Property
 import org.gradle.api.publish.PublishingExtension
 import org.gradle.api.publish.maven.MavenPom
 import org.gradle.api.publish.maven.MavenPublication
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
 import org.gradle.api.publish.maven.tasks.AbstractPublishToMaven
+import org.gradle.api.publish.maven.tasks.GenerateMavenPom
+import org.gradle.configurationcache.extensions.capitalized
 import org.gradle.jvm.tasks.Jar
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.configure
@@ -24,6 +26,8 @@ import org.gradle.kotlin.dsl.create
 import org.gradle.kotlin.dsl.findByType
 import org.gradle.kotlin.dsl.get
 import org.gradle.kotlin.dsl.maybeCreate
+import org.gradle.kotlin.dsl.named
+import org.gradle.kotlin.dsl.namedDomainObjectSet
 import org.gradle.kotlin.dsl.register
 import org.gradle.kotlin.dsl.withType
 import org.gradle.plugins.signing.Sign
@@ -39,13 +43,24 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
 
         val extension = project.extensions
             .create<CentralReleasePublishingExtension>("centralReleasePublishing")
+        // default to empty publication in case none get set
+        extension.publications = project.objects.namedDomainObjectSet(MavenPublication::class)
+
+        val rootExtension = project.rootProject.extensions.findByType<CentralReleasePublishingExtension>()
+        // defaults start with root defaults
+        if (rootExtension != null && rootExtension !== extension) {
+            mergePomDefaults(extension.defaults.pom, rootExtension.defaults.pom, project.name)
+        }
 
         if (project == project.rootProject) {
             rootProject(project, publishLocalForTest)
         } else {
-            project.version = project.rootProject.version
+            // default group and version to root values for convenience
             project.group = project.rootProject.group
+            project.version = project.rootProject.version
         }
+
+        project.plugins.apply(MavenPublishPlugin::class)
 
         project.plugins.withId("org.jetbrains.kotlin.multiplatform") {
             setupPublishing(project, extension, publishLocalForTest, KotlinMultiplatform)
@@ -60,15 +75,10 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
         }
     }
 
-    private fun rootProject(project: Project, publishLocalForTest: Boolean) {
-        project.afterEvaluate {
-            if (project.version == Project.DEFAULT_VERSION) {
-                throw InvalidUserDataException("project.version must be set in the project's root build.gradle file")
-            }
-            if (project.group.toString().isEmpty()) {
-                throw InvalidUserDataException("project.group must be set in the project's root build.gradle file")
-            }
-        }
+    private fun rootProject(
+        project: Project,
+        publishLocalForTest: Boolean
+    ) {
         if (!publishLocalForTest) {
             project.plugins.apply(NexusPublishPlugin::class)
             project.extensions.configure<NexusPublishExtension> {
@@ -85,17 +95,18 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
         publishLocalForTest: Boolean,
         type: PublicationType
     ) {
-        project.plugins.apply(MavenPublishPlugin::class)
         project.plugins.apply(SigningPlugin::class)
 
         if (type == KotlinJvm || type == KotlinMultiplatform) {
-            project.plugins.apply(DokkatooJavadocPlugin::class)
+            project.plugins.apply(DokkatooHtmlPlugin::class)
         }
 
         val signing = project.extensions.findByType<SigningExtension>()!!
         signing.isRequired = project.findProperty("signing.keyId") != null
 
+
         project.extensions.configure<PublishingExtension> {
+            extension.publications = publications.withType(MavenPublication::class.java)
 
             if (publishLocalForTest) {
                 repositories {
@@ -114,18 +125,30 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                     val dokkatoo = project.extensions.findByType<DokkatooExtension>()!!
                     val dokkaJar = project.tasks.register<Jar>("dokkaJar") {
                         archiveClassifier.set("javadoc")
-                        from(dokkatoo.dokkatooPublications.named("javadoc").map { it.outputDir })
+                        from(dokkatoo.dokkatooPublications.named("html").map { it.outputDir })
                     }
                     if (project.pluginManager.hasPlugin("java-gradle-plugin")) {
                         publications.maybeCreate<MavenPublication>("pluginMaven").apply {
                             artifact(dokkaJar)
-                            applyAndValidatePom(project, extension, pom)
+                            finalizeAndValidatePom(
+                                project = project,
+                                publication = this,
+                                snapshot = extension.snapshot,
+                                pomDefaults = extension.defaults.pom,
+                                pom = pom
+                            )
                         }
                     } else {
                         publications.create<MavenPublication>("lib") {
                             from(project.components["java"])
                             artifact(dokkaJar)
-                            applyAndValidatePom(project, extension, pom)
+                            finalizeAndValidatePom(
+                                project = project,
+                                publication = this,
+                                snapshot = extension.snapshot,
+                                pomDefaults = extension.defaults.pom,
+                                pom = pom
+                            )
                         }
                     }
                 }
@@ -134,13 +157,19 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                     val dokkatoo = project.extensions.findByType<DokkatooExtension>()!!
                     val dokkaCommonJar = project.tasks.register<Jar>("dokkaCommonJar") {
                         archiveClassifier.set("javadoc")
-                        from(dokkatoo.dokkatooPublications.named("javadoc").map { it.outputDir })
+                        from(dokkatoo.dokkatooPublications.named("html").map { it.outputDir })
                     }
 
-                    publications.all {
+                    publications.configureEach {
                         if (this is MavenPublication) {
                             artifact(dokkaCommonJar)
-                            applyAndValidatePom(project, extension, pom)
+                            finalizeAndValidatePom(
+                                project = project,
+                                publication = this,
+                                snapshot = extension.snapshot,
+                                pomDefaults = extension.defaults.pom,
+                                pom = pom
+                            )
                         }
                     }
                 }
@@ -156,15 +185,21 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
                         }
                     }
 
-                    project.components.all {
+                    project.components.configureEach {
                         publications.create<MavenPublication>(name) {
-                            from(this@all)
-                            applyAndValidatePom(project, extension, pom)
+                            from(this@configureEach)
+                            finalizeAndValidatePom(
+                                project = project,
+                                publication = this,
+                                snapshot = extension.snapshot,
+                                pomDefaults = extension.defaults.pom,
+                                pom = pom
+                            )
                         }
                     }
                 }
             }
-            publications.all { signing.sign(this) }
+            publications.configureEach { signing.sign(this) }
 
             // TODO: remove after https://youtrack.jetbrains.com/issue/KT-46466 is fixed
             project.tasks.withType<AbstractPublishToMaven>().configureEach {
@@ -173,35 +208,36 @@ class CentralReleasePublishingPlugin : Plugin<Project> {
         }
     }
 
-    private fun applyAndValidatePom(project: Project, extension: CentralReleasePublishingExtension, pom: MavenPom) {
-        project.afterEvaluate {
-            val rootExtension = project.rootProject.extensions.findByType<CentralReleasePublishingExtension>()
-            rootExtension?.apply(project.name, pom)
-            extension.apply(project.name, pom)
+    private fun finalizeAndValidatePom(
+        project: Project,
+        publication: MavenPublication,
+        snapshot: Property<Boolean>,
+        pomDefaults: MavenPomDefaults,
+        pom: MavenPom
+    ) {
+        mergePomDefaults(pom, pomDefaults, project.name)
 
-            tasks.named("publish").configure {
-                doFirst {
-                    validatePom(pom)
-                }
+        // ideally we'd just set a property but version isn't one :(
+        project.afterEvaluate {
+            if (snapshot.getOrElse(false) && publication.version != Project.DEFAULT_VERSION) {
+                publication.version += "-SNAPSHOT"
             }
         }
+
+        val taskPublicationName = publication.name.capitalized()
+        val validatePom =
+            project.tasks.create<ValidatePomForMavenCentral>("validatePomFileFor${taskPublicationName}Publication")
+        project.tasks.named<GenerateMavenPom>("generatePomFileFor${taskPublicationName}Publication") {
+            validatePom.pomFile.set(destination)
+            finalizedBy(validatePom)
+        }
     }
 
-    private fun validatePom(pom: MavenPom) {
-        if (pom.name.orNull.isNullOrBlank()) {
-            throw InvalidPomException("missing name")
-        }
-        if (pom.description.orNull.isNullOrBlank()) {
-            throw InvalidPomException("missing description")
-        }
-        if (pom.url.orNull.isNullOrBlank()) {
-            throw InvalidPomException("missing url")
-        }
-    }
+
 }
 
-class InvalidPomException(message: String) : InvalidUserDataException("invalid pom: $message")
 
 private enum class PublicationType {
     KotlinJvm, KotlinMultiplatform, Android
 }
+

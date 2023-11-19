@@ -28,11 +28,12 @@ class AndroidTest {
         createBuild(projectDir) {
             """
             import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+            import me.tatarka.gradle.publishing.*
                 
             plugins {
                 id("com.android.library") version "8.1.0"
                 kotlin("android") version "1.9.20"
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             group = "com.example"
@@ -50,11 +51,13 @@ class AndroidTest {
             }
             
             centralReleasePublishing {
-                pom {
-                    description = "A description"
-                    github("evant", "my-project", "Eva Tatarka")
-                    licenses {
-                        apache2()
+                publications {
+                    pom {
+                        description = "A description"
+                        github("evant", "my-project", "Eva Tatarka")
+                        licenses {
+                            apache2()
+                        }
                     }
                 }
             }
@@ -92,8 +95,10 @@ class AndroidTest {
 
         createBuild(projectDir, publish = false) {
             """
+            import me.tatarka.gradle.publishing.*
+            
             plugins {
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
                 id("com.android.library") version "8.1.2" apply false
                 kotlin("android") version "1.8.10" apply false
             }
@@ -102,11 +107,13 @@ class AndroidTest {
             version = "1.0.0"
             
             centralReleasePublishing {
-                pom {
-                    description = "A description"
-                    github("evant", "my-project", "Eva Tatarka")
-                    licenses {
-                        apache2()
+                defaults {
+                    pom {
+                        description = "A description"
+                        github("evant", "my-project", "Eva Tatarka")
+                        licenses {
+                            apache2()
+                        }
                     }
                 }
             }
@@ -121,7 +128,7 @@ class AndroidTest {
             plugins {
                 id("com.android.library")
                 kotlin("android")
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             android {
@@ -136,7 +143,7 @@ class AndroidTest {
             plugins {
                 id("com.android.library")
                 kotlin("android")
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             android {

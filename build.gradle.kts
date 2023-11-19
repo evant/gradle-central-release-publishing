@@ -1,7 +1,10 @@
+import me.tatarka.gradle.publishing.github
+import me.tatarka.gradle.publishing.apache2
+
 plugins {
     `java-gradle-plugin`
     `kotlin-dsl`
-    id("me.tatarka.gradle.bootstrap")
+    id("me.tatarka.gradle.publishing.bootstrap")
 }
 
 group = libs.self.get().group
@@ -18,8 +21,17 @@ dependencies {
     testImplementation(libs.assertk)
 }
 
-if (!project.hasProperty("stage0")) {
-    apply(from = "publish.gradle")
+centralReleasePublishing {
+    snapshot = System.getenv("CIRCLE_TAG") == null
+    publications {
+        pom {
+            description = "An opinionated gradle plugin to manage publishing to maven central"
+            github("evant", "gradle-central-release-publishing", "Eva Tatarka")
+            licenses {
+                apache2()
+            }
+        }
+    }
 }
 
 val bootstrap = tasks.register("bootstrap") {
@@ -34,8 +46,8 @@ tasks.test {
 gradlePlugin {
     plugins {
         create("central-release-management") {
-            id = "me.tatarka.gradle.central-release-publishing"
-            implementationClass = "me.tatarka.gradle.CentralReleasePublishingPlugin"
+            id = "me.tatarka.gradle.publishing.central-release-publishing"
+            implementationClass = "me.tatarka.gradle.publishing.CentralReleasePublishingPlugin"
         }
     }
 }

@@ -1,18 +1,17 @@
-package me.tatarka.gradle
+package me.tatarka.gradle.publishing
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.publish.PublishingExtension
-import org.gradle.api.publish.maven.plugins.MavenPublishPlugin
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.configure
 
 class BootstrapPlugin : Plugin<Project> {
     override fun apply(project: Project) {
         if (project.hasProperty("stage0")) {
-            project.plugins.apply(MavenPublishPlugin::class)
+            project.plugins.apply(StubPlugin::class)
         } else {
-            project.plugins.apply("me.tatarka.gradle.central-release-publishing")
+            project.plugins.apply("me.tatarka.gradle.publishing.central-release-publishing")
         }
         project.extensions.configure<PublishingExtension> {
             repositories {

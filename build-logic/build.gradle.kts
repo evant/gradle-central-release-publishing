@@ -6,15 +6,22 @@ plugins {
 
 dependencies {
     if (!project.hasProperty("stage0")) {
-        implementation(libs.self)
+        implementation(libs.self) {
+            if (System.getenv("CIRCLE_TAG") == null) {
+                val currentVersion = versionConstraint.requiredVersion
+                version {
+                    require("${currentVersion}-SNAPSHOT")
+                }
+            }
+        }
     }
 }
 
 gradlePlugin {
     plugins {
         create("bootstrap") {
-            id = "me.tatarka.gradle.bootstrap"
-            implementationClass = "me.tatarka.gradle.BootstrapPlugin"
+            id = "me.tatarka.gradle.publishing.bootstrap"
+            implementationClass = "me.tatarka.gradle.publishing.BootstrapPlugin"
         }
     }
 }

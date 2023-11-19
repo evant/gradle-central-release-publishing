@@ -25,10 +25,12 @@ class GradlePluginTest {
 
         createBuild(projectDir) {
             """
+            import me.tatarka.gradle.publishing.*
+                
             plugins {
                 `java-gradle-plugin`
                 `kotlin-dsl`
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             group = "com.example"
@@ -44,11 +46,13 @@ class GradlePluginTest {
             }
             
             centralReleasePublishing {
-                pom {
-                    description = "A description"
-                    github("evant", "my-project", "Eva Tatarka")
-                    licenses {
-                        apache2()
+                publications {
+                    pom {
+                        description = "A description"
+                        github("evant", "my-project", "Eva Tatarka")
+                        licenses {
+                            apache2()
+                        }
                     }
                 }
             }

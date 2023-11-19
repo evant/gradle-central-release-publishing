@@ -24,20 +24,24 @@ class KotlinJvmTest {
 
         createBuild(projectDir) {
             """
+            import me.tatarka.gradle.publishing.*
+            
             plugins {
                 kotlin("jvm") version "1.9.10"
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             group = "com.example"
             version = "1.0.0"
             
             centralReleasePublishing {
-                pom {
-                    description = "A description"
-                    github("evant", "my-project", "Eva Tatarka")
-                    licenses {
-                        apache2()
+                publications {
+                    pom {
+                        description = "A description"
+                        github("evant", "my-project", "Eva Tatarka")
+                        licenses {
+                            apache2()
+                        }
                     }
                 }
             }
@@ -73,19 +77,23 @@ class KotlinJvmTest {
 
         createBuild(projectDir, publish = false) {
             """
+            import me.tatarka.gradle.publishing.*
+            
             plugins {
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             group = "com.example"
             version = "1.0.0"
             
             centralReleasePublishing {
-                pom {
-                    description = "A description"
-                    github("evant", "my-project", "Eva Tatarka")
-                    licenses {
-                        apache2()
+                defaults {
+                    pom {
+                        description = "A description"
+                        github("evant", "my-project", "Eva Tatarka")
+                        licenses {
+                            apache2()
+                        }
                     }
                 }
             }
@@ -99,7 +107,7 @@ class KotlinJvmTest {
             """
             plugins {
                 kotlin("jvm") version "1.9.10"
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             """.trimIndent()
         }
@@ -108,7 +116,7 @@ class KotlinJvmTest {
             """
             plugins {
                 kotlin("jvm") version "1.9.10"
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             """.trimIndent()
         }

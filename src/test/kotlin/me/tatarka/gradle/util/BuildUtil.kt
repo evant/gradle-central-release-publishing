@@ -34,13 +34,17 @@ fun publish(projectDir: Path): String {
 
 fun createSettings(projectDir: Path, name: String, contents: () -> String = { "" }) {
     val pluginRepo = Paths.get(".").resolve("build/bootstrap").absolutePathString()
-    val version = Paths.get(".").resolve("gradle/libs.versions.toml")
+    var version = Paths.get(".").resolve("gradle/libs.versions.toml")
         .bufferedReader()
         .lineSequence()
         .mapNotNull { line ->
             VersionMatch.matchEntire(line)?.let { it.groups[1]?.value }
         }
         .first()
+
+    if (System.getenv("CIRCLE_TAG") == null) {
+        version += "-SNAPSHOT"
+    }
 
     projectDir.resolve("settings.gradle.kts").apply {
         writeText(
@@ -57,8 +61,8 @@ fun createSettings(projectDir: Path, name: String, contents: () -> String = { ""
                 }
                 resolutionStrategy {
                     eachPlugin {
-                        if (target.id.id == "me.tatarka.gradle.central-release-publishing") {
-                            useModule("me.tatarka.gradle:central-release-publishing:${version}")
+                        if (target.id.id == "me.tatarka.gradle.publishing.central-release-publishing") {
+                            useModule("me.tatarka.gradle.publishing:central-release-publishing:${version}")
                         }
                     }
                 }

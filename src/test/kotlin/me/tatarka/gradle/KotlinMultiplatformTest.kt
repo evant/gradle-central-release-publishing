@@ -23,9 +23,11 @@ class KotlinMultiplatformTest {
 
         createBuild(projectDir) {
             """
+            import me.tatarka.gradle.publishing.*
+            
             plugins {
                 kotlin("multiplatform") version "1.9.10"
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             group = "com.example"
@@ -37,11 +39,13 @@ class KotlinMultiplatformTest {
             }
             
             centralReleasePublishing {
-                pom {
-                    description = "A description"
-                    github("evant", "my-project", "Eva Tatarka")
-                    licenses {
-                        apache2()
+                publications {
+                    pom {
+                        description = "A description"
+                        github("evant", "my-project", "Eva Tatarka")
+                        licenses {
+                            apache2()
+                        }
                     }
                 }
             }
@@ -69,19 +73,23 @@ class KotlinMultiplatformTest {
 
         createBuild(projectDir, publish = false) {
             """
+            import me.tatarka.gradle.publishing.*
+            
             plugins {
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             group = "com.example"
             version = "1.0.0"
             
             centralReleasePublishing {
-                pom {
-                    description = "A description"
-                    github("evant", "my-project", "Eva Tatarka")
-                    licenses {
-                        apache2()
+                defaults {
+                    pom {
+                        description = "A description"
+                        github("evant", "my-project", "Eva Tatarka")
+                        licenses {
+                            apache2()
+                        }
                     }
                 }
             }
@@ -95,7 +103,7 @@ class KotlinMultiplatformTest {
             """
             plugins {
                 kotlin("multiplatform") version "1.9.10"
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             kotlin {
@@ -109,7 +117,7 @@ class KotlinMultiplatformTest {
             """
             plugins {
                 kotlin("multiplatform") version "1.9.10"
-                id("me.tatarka.gradle.central-release-publishing")
+                id("me.tatarka.gradle.publishing.central-release-publishing")
             }
             
             kotlin {
