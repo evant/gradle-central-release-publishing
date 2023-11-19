@@ -14,7 +14,13 @@ jobs:
       - gradle/with_cache:
           steps:
             - run:
-                name: Check 🐘
+                name: Bootstrap 0
+                command: ./gradlew bootstrap -Pstage0
+            - run:
+                name: Bootstrap
+                command: ./gradlew bootstrap
+            - run:
+                name: Check
                 command: ./gradlew check
             - deploy:
                 command: |
