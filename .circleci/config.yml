@@ -5,7 +5,7 @@ jobs:
   build:
     working_directory: ~/code
     docker:
-      - image: cimg/openjdk:21.0.0
+      - image: cimg/android:2023.04.1
     resource_class: large
     environment:
       JVM_OPTS: -Xmx3200m
@@ -14,7 +14,13 @@ jobs:
       - gradle/with_cache:
           steps:
             - run:
-                name: Check 🐘
+                name: Bootstrap 0
+                command: ./gradlew bootstrap -Pstage0
+            - run:
+                name: Bootstrap
+                command: ./gradlew bootstrap
+            - run:
+                name: Check
                 command: ./gradlew check
             - deploy:
                 command: |
@@ -23,6 +29,7 @@ jobs:
                     gpg --import --batch $HOME/secring.gpg
                     ./gradlew publish -PsonatypeUsername="$SONATYPE_USERNAME" -PsonatypePassword="$SONATYPE_PASSWORD" -Psigning.keyId=34BCD878 -Psigning.password="$MAVEN_CENTRAL_KEY_PASSPHRASE" -Psigning.secretKeyRingFile=$HOME/secring.gpg -Porg.gradle.parallel=false
                   fi
+      - gradle/collect_test_results
 workflows:
   version: 2
   build:
