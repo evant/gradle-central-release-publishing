@@ -28,9 +28,17 @@ abstract class StubCentralReleasePublishingExtension {
 
     abstract val snapshot: Property<Boolean>
 
+    fun defaults(actions: Action<StubPublicationDefaults>) {
+        // ignore
+    }
+
     fun publications(action: Action<StubMavenPublication>) {
         // ignore
     }
+}
+
+abstract class StubPublicationDefaults {
+    abstract fun pom(action: Action<StubMavenPom>)
 }
 
 abstract class StubMavenPublication {

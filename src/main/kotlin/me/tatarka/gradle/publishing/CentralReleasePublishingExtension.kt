@@ -197,11 +197,8 @@ abstract class MavenPomDeveloperSpecDefaults(
 
 abstract class MavenPomDistributionManagementDefaults : MavenPomDistributionManagement {
 
-    @get:Nested
-    abstract val relocation: MavenPomRelocation
-
     override fun relocation(action: Action<in MavenPomRelocation>) {
-        action.execute(relocation)
+        throw NotImplementedError("You can't set relocation defaults")
     }
 }
 
@@ -235,11 +232,9 @@ internal fun mergePomDefaults(pom: MavenPom, defaults: MavenPomDefaults, project
             }
         }
     })
-    if (defaults.organization.name.isPresent || defaults.organization.url.isPresent) {
-        pom.organization {
-            name.convention(defaults.organization.name)
-            url.convention(defaults.organization.url)
-        }
+    pom.organization {
+        name.convention(defaults.organization.name)
+        url.convention(defaults.organization.url)
     }
     defaults.developers.all(object : Action<MavenPomDeveloper> {
         override fun execute(default: MavenPomDeveloper) {
@@ -274,50 +269,22 @@ internal fun mergePomDefaults(pom: MavenPom, defaults: MavenPomDefaults, project
             }
         }
     })
-    if (defaults.scm.connection.isPresent || defaults.scm.developerConnection.isPresent || defaults.scm.url.isPresent ||
-        defaults.scm.tag.isPresent
-    ) {
-        pom.scm {
-            connection.convention(defaults.scm.connection)
-            developerConnection.convention(defaults.scm.developerConnection)
-            url.convention(defaults.scm.url)
-            tag.convention(defaults.scm.tag)
-        }
+    pom.scm {
+        connection.convention(defaults.scm.connection)
+        developerConnection.convention(defaults.scm.developerConnection)
+        url.convention(defaults.scm.url)
+        tag.convention(defaults.scm.tag)
     }
-    if (defaults.issueManagement.system.isPresent || defaults.issueManagement.url.isPresent) {
-        pom.issueManagement {
-            system.convention(defaults.issueManagement.system)
-            url.convention(defaults.issueManagement.url)
-        }
+    pom.issueManagement {
+        system.convention(defaults.issueManagement.system)
+        url.convention(defaults.issueManagement.url)
     }
-    if (defaults.ciManagement.system.isPresent || defaults.ciManagement.url.isPresent) {
-        pom.ciManagement {
-            system.convention(defaults.ciManagement.system)
-            url.convention(defaults.ciManagement.url)
-        }
+    pom.ciManagement {
+        system.convention(defaults.ciManagement.system)
+        url.convention(defaults.ciManagement.url)
     }
-    if (defaults.distributionManagement.downloadUrl.isPresent ||
-        defaults.distributionManagement.relocation.artifactId.isPresent ||
-        defaults.distributionManagement.relocation.groupId.isPresent ||
-        defaults.distributionManagement.relocation.version.isPresent ||
-        defaults.distributionManagement.relocation.message.isPresent
-    ) {
-        pom.distributionManagement {
-            downloadUrl.convention(defaults.distributionManagement.downloadUrl)
-            if (
-                defaults.distributionManagement.relocation.artifactId.isPresent ||
-                defaults.distributionManagement.relocation.groupId.isPresent ||
-                defaults.distributionManagement.relocation.version.isPresent ||
-                defaults.distributionManagement.relocation.message.isPresent
-            ) {
-                relocation {
-                    artifactId.convention(defaults.distributionManagement.relocation.artifactId)
-                    groupId.convention(defaults.distributionManagement.relocation.groupId)
-                    version.convention(defaults.distributionManagement.relocation.version)
-                    message.convention(defaults.distributionManagement.relocation.message)
-                }
-            }
-        }
+    pom.distributionManagement {
+        downloadUrl.convention(defaults.distributionManagement.downloadUrl)
     }
     defaults.mailingLists.all(object : Action<MavenPomMailingList> {
         override fun execute(default: MavenPomMailingList) {

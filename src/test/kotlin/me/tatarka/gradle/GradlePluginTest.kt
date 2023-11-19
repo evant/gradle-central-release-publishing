@@ -46,7 +46,7 @@ class GradlePluginTest {
             }
             
             centralReleasePublishing {
-                publications {
+                defaults {
                     pom {
                         description = "A description"
                         github("evant", "my-project", "Eva Tatarka")

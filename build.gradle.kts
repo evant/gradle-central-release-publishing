@@ -23,7 +23,8 @@ dependencies {
 
 centralReleasePublishing {
     snapshot = System.getenv("CIRCLE_TAG") == null
-    publications {
+
+    defaults {
         pom {
             description = "An opinionated gradle plugin to manage publishing to maven central"
             github("evant", "gradle-central-release-publishing", "Eva Tatarka")
